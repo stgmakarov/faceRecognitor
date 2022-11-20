@@ -150,14 +150,4 @@ if __name__ == "__main__":
                 good += 1
         all += 1
 
-        # if predict[0] in filename:
-        #     true_labels.append(predict[0])
-        # else:
-        #     true_labels.append(filename)
-        # preds.append(predict[0])
-
-        # print(predict + " - " + filename)
-        # print(raw_pred)
-        # print(probabilities)
-
     print("точность " + str(good * 100 / all ))
