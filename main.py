@@ -92,7 +92,7 @@ if __name__ == "__main__":
     print("2. Проверить")
     userInput = input();
     if userInput == '1':
-        # get_test_data('dataset/full_train/')
+        get_test_data('dataset/full_train/')
         trainX, trainY = load_dataset('dataset/full_train/')
 
         assert len(trainX) == len(trainY)
@@ -112,6 +112,8 @@ if __name__ == "__main__":
 
     preds = []
     true_labels = []
+    good = 0
+    all = 0
     for filename in os.listdir('dataset/test_faces/'):
         image = Image.open('dataset/test_faces/' + filename)
         img_arr = np.array(image)
@@ -139,9 +141,14 @@ if __name__ == "__main__":
         probabilities = sigmoid(raw_pred)
 
         if max(probabilities) > trashhold/100:
-            print(predict + "(" + str(max(probabilities)*100) + "%) - " + filename)
+            print(predict + "(" + str(max(probabilities) * 100) + "%) - " + filename)
+            if predict[0] in filename:
+                good += 1
         else:
-            print("unknown (" + predict +" " + str(max(probabilities)*100) + "%) - "+ filename)
+            print("unknown - " + filename)
+            if predict[0] not in filename:
+                good += 1
+        all += 1
 
         # if predict[0] in filename:
         #     true_labels.append(predict[0])
@@ -153,3 +160,4 @@ if __name__ == "__main__":
         # print(raw_pred)
         # print(probabilities)
 
+    print("точность " + str(good * 100 / all ))
