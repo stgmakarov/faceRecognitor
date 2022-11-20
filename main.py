@@ -7,7 +7,9 @@ from catboost import CatBoostClassifier
 from insightface import *
 from insightface.app import FaceAnalysis
 from sklearn.metrics import accuracy_score
+from numpy import exp
 
+trashhold = 80
 
 def rename_files(dir):
     for subdir in os.listdir(dir):
@@ -76,20 +78,22 @@ def filter_empty_embs(img_set: np.array, img_labels: List[str]):
 
 if __name__ == "__main__":
     app = FaceAnalysis(name="buffalo_l", providers=['CUDAExecutionProvider'])
-    app.prepare(ctx_id=0, det_size=(256, 256))
+    app.prepare(ctx_id=0, det_thresh=0.5, det_size=(256, 256))
 
-    rename_files('dataset/unmasked_users/')
+    rename_files('dataset/full_train/')
 
-    clf_model = CatBoostClassifier(iterations=100,
+    clf_model = CatBoostClassifier(iterations=200,
                                    task_type="GPU",
-                                   devices='0:1')
+                                   devices='0:1',
+                                   learning_rate=0.01,
+                                   )
 
     print("1. Обучить модель")
     print("2. Проверить")
     userInput = input();
     if userInput == '1':
-        # get_test_data('dataset/unmasked_users/')
-        trainX, trainY = load_dataset('dataset/unmasked_users/')
+        # get_test_data('dataset/full_train/')
+        trainX, trainY = load_dataset('dataset/full_train/')
 
         assert len(trainX) == len(trainY)
         train_emb, train_labels = filter_empty_embs(trainX, trainY)
@@ -99,7 +103,8 @@ if __name__ == "__main__":
 
         clf_model.fit(np.array(list(train_emb)),
                       train_labels,
-                      verbose=False)
+                      verbose=False,
+                      plot=True)
 
         clf_model.save_model("my_model")
     elif userInput == '2':
@@ -122,10 +127,29 @@ if __name__ == "__main__":
 
         predict = clf_model.predict(face_array)
 
-        if predict[0] in filename:
-            true_labels.append(predict[0])
-        else:
-            true_labels.append(filename)
-        preds.append(predict[0])
+        raw_pred = clf_model.predict(
+            face_array,
+            prediction_type='RawFormulaVal'
+        )
 
-    print(accuracy_score(true_labels, preds))
+        if(max(raw_pred)==0.):
+            raw_pred = raw_pred - min(raw_pred)
+
+        sigmoid = lambda x: 1 / (1 + exp(-x))
+        probabilities = sigmoid(raw_pred)
+
+        if max(probabilities) > trashhold/100:
+            print(predict + "(" + str(max(probabilities)*100) + "%) - " + filename)
+        else:
+            print("unknown (" + predict +" " + str(max(probabilities)*100) + "%) - "+ filename)
+
+        # if predict[0] in filename:
+        #     true_labels.append(predict[0])
+        # else:
+        #     true_labels.append(filename)
+        # preds.append(predict[0])
+
+        # print(predict + " - " + filename)
+        # print(raw_pred)
+        # print(probabilities)
+
