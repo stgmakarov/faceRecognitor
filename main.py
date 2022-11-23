@@ -8,6 +8,7 @@ from insightface import *
 from insightface.app import FaceAnalysis
 from sklearn.metrics import accuracy_score
 from numpy import exp
+from sklearn.model_selection import train_test_split
 
 trashhold = 80
 
@@ -82,28 +83,31 @@ if __name__ == "__main__":
 
     rename_files('dataset/full_train/')
 
-    clf_model = CatBoostClassifier(iterations=200,
+    clf_model = CatBoostClassifier(iterations=1000,
                                    task_type="GPU",
                                    devices='0:1',
-                                   learning_rate=0.01,
+                                   learning_rate=0.5,
                                    )
 
     print("1. Обучить модель")
     print("2. Проверить")
     userInput = input();
     if userInput == '1':
-        get_test_data('dataset/full_train/')
+        #get_test_data('dataset/full_train/')
         trainX, trainY = load_dataset('dataset/full_train/')
 
         assert len(trainX) == len(trainY)
         train_emb, train_labels = filter_empty_embs(trainX, trainY)
 
+        X_train, X_test, y_train, y_test = train_test_split(train_emb, train_labels, test_size=0.1, shuffle=True)
+
         assert len(train_emb) == len(train_labels)
         print("Train_X size is {} , train_y size is {} ".format(train_emb.shape, train_labels.shape))
 
-        clf_model.fit(np.array(list(train_emb)),
-                      train_labels,
-                      verbose=False,
+        clf_model.fit(np.array(list(X_train)),
+                      y_train,
+                      eval_set=(list(X_test), y_test),
+                      #verbose=False,
                       plot=True)
 
         clf_model.save_model("my_model")
